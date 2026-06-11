@@ -8,7 +8,13 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// 1. ТВОЯ ФУНКЦИЯ РИСОВАНИЯ (Шаг 3)
+// Переменные для позиции и скорости муравья
+let antX = canvas.width / 2;
+let antY = canvas.height / 2;
+let speedX = 2; 
+let speedY = 1; 
+
+// 1. ФУНКЦИЯ РИСОВАНИЯ (Шаг 3)
 function drawAnt(x, y) {
     ctx.fillStyle = '#ffffff'; 
     ctx.beginPath();           
@@ -16,17 +22,19 @@ function drawAnt(x, y) {
     ctx.fill();                
 }
 
-// 2. ИГРОВОЙ ЦИКЛ РУСЛАНА (Шаг 2)
+// 2. ИГРОВОЙ ЦИКЛ (Шаг 2 + Шаг 4)
 function animationLoop() {
-    // Ластик Руслана стирает холст
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Твой вызов рисует точку прямо внутри этого цикла
-    drawAnt(canvas.width / 2, canvas.height / 2);
+    // Изменение координат для движения
+    antX += speedX; 
+    antY += speedY; 
 
-    // Запрос на следующий кадр
+    // Отрисовка муравья на новых координатах
+    drawAnt(antX, antY);
+
     requestAnimationFrame(animationLoop);
 }
 
-// Запуск движка
+// Запуск
 animationLoop();
