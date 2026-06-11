@@ -10,22 +10,28 @@ resizeCanvas();
 
 // --- НАСТРОЙКИ СИМУЛЯЦИИ ---
 const ANT_RADIUS = 5;
+const ANTS_COUNT = 67; // ТВОЁ ОБНОВЛЕНИЕ: Количество муравьев
 let homeX = 100;
 let homeY = 100;
 
-// --- КООРДИНАТЫ И СКОРОСТЬ МУРАВЬЯ ---
-// Спавним его в центре экрана
-let antX = canvas.width / 2;
-let antY = canvas.height / 2;
+// ===================================================
+// === ТВОЙ НОВЫЙ КОД: ШАГ 7 — МАССИВ МУРАВЬЕВ ===
+// ===================================================
 
-// Скорость движения: 4 пикселя за кадр в случайном направлении
-let speedX = (Math.random() - 0.5) * 8; 
-let speedY = (Math.random() - 0.5) * 8; 
+let ants = [];
 
+// Циклом создаем 100 индивидуальных муравьев
+for (let i = 0; i < ANTS_COUNT; i++) {
+    ants.push({
+        x: canvas.width / 2,                          // Все стартуют из центра
+        y: canvas.height / 2,
+        speedX: (Math.random() - 0.5) * 6,            // Случайная скорость по X
+        speedY: (Math.random() - 0.5) * 6             // Случайная скорость по Y
+    });
+}
 
 // --- ФУНКЦИИ ОТРИСОВКИ ---
 
-// Функция рисования муравья (Шаг 3 Эркина)
 function drawAnt(x, y) {
     ctx.fillStyle = '#ffffff'; 
     ctx.beginPath();           
@@ -33,7 +39,6 @@ function drawAnt(x, y) {
     ctx.fill();                
 }
 
-// Функция рисования Муравейника (Синий круг) - Шаг 5 Эркина
 function drawHome(x, y, radius) {
     ctx.fillStyle = '#1e3a8a'; 
     ctx.beginPath();
@@ -44,7 +49,6 @@ function drawHome(x, y, radius) {
     ctx.stroke();
 }
 
-// Функция рисования Еды (Зеленый круг) - Шаг 5 Эркина
 function drawFood(x, y, radius) {
     ctx.fillStyle = '#065f46'; 
     ctx.beginPath();
@@ -60,32 +64,37 @@ function drawFood(x, y, radius) {
 function animationLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Логика зон: они просто рисуются
+    // Логика зон
     let foodX = canvas.width - 100;
     let foodY = canvas.height - 100;
     drawHome(homeX, homeY, 40);
     drawFood(foodX, foodY, 40);
 
 
-    // === ОБНОВЛЕНИЕ ЛОГИКИ МУРАВЬЯ (Шаг 6: Отскоки) ===
+    // ===================================================
+    // === ТВОЙ НОВЫЙ КОД: ОБСЛУЖИВАЕМ ВСЮ ТОЛПУ В ЦИКЛЕ ===
+    // ===================================================
     
-    // 1. Двигаем муравья
-    antX += speedX;
-    antY += speedY;
+    for (let i = 0; i < ants.length; i++) {
+        let ant = ants[i]; // Берем одного конкретного муравья из массива
 
-    // 2. Проверяем столкновение с правой или левой границей
-    if (antX + ANT_RADIUS > canvas.width || antX - ANT_RADIUS < 0) {
-        speedX = -speedX; // Меняем направление по оси X на противоположное
+        // 1. Двигаем именно этого муравья
+        ant.x += ant.speedX;
+        ant.y += ant.speedY;
+
+        // 2. Проверяем его личный отскок от левой/правой стены
+        if (ant.x + ANT_RADIUS > canvas.width || ant.x - ANT_RADIUS < 0) {
+            ant.speedX = -ant.speedX;
+        }
+
+        // 3. Проверяем его личный отскок от верхней/нижней стены
+        if (ant.y + ANT_RADIUS > canvas.height || ant.y - ANT_RADIUS < 0) {
+            ant.speedY = -ant.speedY;
+        }
+
+        // 4. Рисуем этого муравья на его новых координатах
+        drawAnt(ant.x, ant.y);
     }
-
-    // 3. Проверяем столкновение с верхней или нижней границей
-    if (antY + ANT_RADIUS > canvas.height || antY - ANT_RADIUS < 0) {
-        speedY = -speedY; // Меняем направление по оси Y на противоположное
-    }
-
-
-    // Отрисовка муравья на новых координатах
-    drawAnt(antX, antY);
 
     requestAnimationFrame(animationLoop);
 }
