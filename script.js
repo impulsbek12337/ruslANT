@@ -8,66 +8,81 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Переменные для позиции и скорости муравья
+// --- НАСТРОЙКИ СИМУЛЯЦИИ ---
+const ANT_RADIUS = 5;
+let homeX = 100;
+let homeY = 100;
+
+// --- КООРДИНАТЫ И СКОРОСТЬ МУРАВЬЯ ---
+// Спавним его в центре экрана
 let antX = canvas.width / 2;
 let antY = canvas.height / 2;
-let speedX = 2; 
-let speedY = 1; 
 
-// Функция рисования муравья (Шаг 3)
+// Скорость движения: 4 пикселя за кадр в случайном направлении
+let speedX = (Math.random() - 0.5) * 8; 
+let speedY = (Math.random() - 0.5) * 8; 
+
+
+// --- ФУНКЦИИ ОТРИСОВКИ ---
+
+// Функция рисования муравья (Шаг 3 Эркина)
 function drawAnt(x, y) {
     ctx.fillStyle = '#ffffff'; 
     ctx.beginPath();           
-    ctx.arc(x, y, 5, 0, Math.PI * 2); 
+    ctx.arc(x, y, ANT_RADIUS, 0, Math.PI * 2); 
     ctx.fill();                
 }
 
-// ==========================================
-// === ТВОЙ НОВЫЙ КОД: ШАГ 5 (ЭРКИН) ===
-// ==========================================
-
-// 1. Функция рисования Муравейника (Синий круг)
+// Функция рисования Муравейника (Синий круг) - Шаг 5 Эркина
 function drawHome(x, y, radius) {
-    ctx.fillStyle = '#1e3a8a'; // Красивый темно-синий цвет
+    ctx.fillStyle = '#1e3a8a'; 
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Делаем аккуратную обводку, чтобы выглядело сочнее
     ctx.strokeStyle = '#3b82f6'; 
     ctx.lineWidth = 3;
     ctx.stroke();
 }
 
-// 2. Функция рисования Еды (Зеленый круг)
+// Функция рисования Еды (Зеленый круг) - Шаг 5 Эркина
 function drawFood(x, y, radius) {
-    ctx.fillStyle = '#065f46'; // Темно-зеленый цвет
+    ctx.fillStyle = '#065f46'; 
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
-    
-    // Обводка для еды
     ctx.strokeStyle = '#10b981'; 
     ctx.lineWidth = 3;
     ctx.stroke();
 }
 
 
-// ИГРОВОЙ ЦИКЛ (Шаг 2 + Шаг 4 + Твой Шаг 5)
+// --- ИГРОВОЙ ЦИКЛ ---
 function animationLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // === ТВОЙ НОВЫЙ КОД: Рисуем зоны на холсте ===
-    // Муравейник рисуем в левом верхнем углу (отступив по 100 пикселей, радиус 40)
-    drawHome(100, 100, 40);
+    // Логика зон: они просто рисуются
+    let foodX = canvas.width - 100;
+    let foodY = canvas.height - 100;
+    drawHome(homeX, homeY, 40);
+    drawFood(foodX, foodY, 40);
+
+
+    // === ОБНОВЛЕНИЕ ЛОГИКИ МУРАВЬЯ (Шаг 6: Отскоки) ===
     
-    // Еду рисуем в правом нижнем углу холста (радиус 40)
-    drawFood(canvas.width - 100, canvas.height - 100, 40);
+    // 1. Двигаем муравья
+    antX += speedX;
+    antY += speedY;
 
+    // 2. Проверяем столкновение с правой или левой границей
+    if (antX + ANT_RADIUS > canvas.width || antX - ANT_RADIUS < 0) {
+        speedX = -speedX; // Меняем направление по оси X на противоположное
+    }
 
-    // Изменение координат для движения (Логика Руслана)
-    antX += speedX; 
-    antY += speedY; 
+    // 3. Проверяем столкновение с верхней или нижней границей
+    if (antY + ANT_RADIUS > canvas.height || antY - ANT_RADIUS < 0) {
+        speedY = -speedY; // Меняем направление по оси Y на противоположное
+    }
+
 
     // Отрисовка муравья на новых координатах
     drawAnt(antX, antY);
