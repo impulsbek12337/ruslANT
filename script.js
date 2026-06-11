@@ -23,3 +23,16 @@ resizeCanvas();
 
 // Если пользователь изменит размер окна — холст подстроится под него
 window.addEventListener('resize', resizeCanvas);
+
+// === КОД РУСЛАНА (ШАГ 2): Движок анимации ===
+
+function animationLoop() {
+    // Очищаем холст перед каждым новым кадром
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Запрашиваем следующий кадр (бесконечный цикл)
+    requestAnimationFrame(animationLoop);
+}
+
+// Запускаем цикл анимации
+animationLoop();
