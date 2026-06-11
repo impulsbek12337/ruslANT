@@ -1,38 +1,32 @@
-// Находим холст и контекст для рисования
 const canvas = document.getElementById('simulationCanvas');
 const ctx = canvas.getContext('2d');
 
-// Функция, которая подстраивает размер холста под экран
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    
-    // Временная заливка, чтобы проверить, что всё работает (сделаем серый экран)
-    ctx.fillStyle = '#2d2d2d';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Выведем текст по центру для красоты
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '24px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Холст готов. Ждем муравьев от Руслана!', canvas.width / 2, canvas.height / 2);
 }
-
-// Запускаем настройку при старте
+window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Если пользователь изменит размер окна — холст подстроится под него
-window.addEventListener('resize', resizeCanvas);
+// 1. ТВОЯ ФУНКЦИЯ РИСОВАНИЯ (Шаг 3)
+function drawAnt(x, y) {
+    ctx.fillStyle = '#ffffff'; 
+    ctx.beginPath();           
+    ctx.arc(x, y, 5, 0, Math.PI * 2); 
+    ctx.fill();                
+}
 
-// === КОД РУСЛАНА (ШАГ 2): Движок анимации ===
-
+// 2. ИГРОВОЙ ЦИКЛ РУСЛАНА (Шаг 2)
 function animationLoop() {
-    // Очищаем холст перед каждым новым кадром
+    // Ластик Руслана стирает холст
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Запрашиваем следующий кадр (бесконечный цикл)
+    // Твой вызов рисует точку прямо внутри этого цикла
+    drawAnt(canvas.width / 2, canvas.height / 2);
+
+    // Запрос на следующий кадр
     requestAnimationFrame(animationLoop);
 }
 
-// Запускаем цикл анимации
+// Запуск движка
 animationLoop();
