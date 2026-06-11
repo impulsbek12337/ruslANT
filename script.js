@@ -73,27 +73,43 @@ document.getElementById('startBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
+    // При сбросе возвращаем количество к тому, что сейчас на слайдере
+    ANTS_COUNT = parseInt(slider.value);
     initAnts(); 
 });
 
 
-// === [ШАГ 11 (ЭРКИН)]: СЛУШАТЕЛЬ ДЛЯ СЛАЙДЕРА ===
+// === [ШАГ 11 + ШАГ 12 (РУСЛАН)]: СВЯЗЫВАНИЕ СЛАЙДЕРА С КОДОМ ===
 const slider = document.getElementById('antSlider');
 const label = document.getElementById('antCountLabel');
 
 slider.addEventListener('input', (e) => {
     const newValue = parseInt(e.target.value);
-    label.innerText = newValue; // Обновляем циферку на панели
+    label.innerText = newValue; // Обновляем циферку на панели (Шаг 11)
     
-    // ПРИМЕЧАНИЕ: Сам массив муравьев тут пока не меняется. 
-    // Наш Шаг 11 — это чисто интерфейс. Логику изменения количества в памяти напишет Руслан на Шаге 12.
+    ANTS_COUNT = newValue; // Обновляем глобальную переменную
+
+    // Динамически меняем размер массива в памяти на лету (Шаг 12)
+    if (ants.length < ANTS_COUNT) {
+        // Если нужно больше муравьев — создаем новых и пушим в массив
+        while (ants.length < ANTS_COUNT) {
+            ants.push({
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                speedX: (Math.random() - 0.5) * 6,
+                speedY: (Math.random() - 0.5) * 6
+            });
+        }
+    } else if (ants.length > ANTS_COUNT) {
+        // Если нужно меньше — просто отрезаем лишних с конца массива
+        ants.length = ANTS_COUNT;
+    }
 });
 
 
 // --- ФУНКЦИИ ОТРИСОВКИ ---
 
 // === [ШАГ 9 (ЭРКИН)]: ОБНОВЛЕННАЯ ФУНКЦИЯ ОТРИСОВКИ ===
-// Принимает массив и рисует всех муравьев разом
 function drawAnts(antsArray) {
     ctx.fillStyle = '#ffffff'; 
     for (let i = 0; i < antsArray.length; i++) {
