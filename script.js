@@ -46,7 +46,7 @@ document.body.appendChild(panel);
 // --- МАССИВ МУРАВЬЕВ ---
 let ants = [];
 
-// Функция для создания муравьев (нужна для сброса)
+// Функция для создания муравьев (Шаг 13: Добавлен статус еды hasFood)
 function initAnts() {
     ants = [];
     for (let i = 0; i < ANTS_COUNT; i++) {
@@ -54,7 +54,8 @@ function initAnts() {
             x: canvas.width / 2,         
             y: canvas.height / 2,
             speedX: (Math.random() - 0.5) * 6,         
-            speedY: (Math.random() - 0.5) * 6          
+            speedY: (Math.random() - 0.5) * 6,
+            hasFood: false // Изначально пустой (белый) (Шаг 13)
         });
     }
 }
@@ -89,19 +90,18 @@ slider.addEventListener('input', (e) => {
     
     ANTS_COUNT = newValue; // Обновляем глобальную переменную
 
-    // Динамически меняем размер массива в памяти на лету (Шаг 12)
+    // Динамически меняем размер массива в памяти на лету (Шаг 12) (Шаг 13: Добавлен hasFood для новых муравьев)
     if (ants.length < ANTS_COUNT) {
-        // Если нужно больше муравьев — создаем новых и пушим в массив
         while (ants.length < ANTS_COUNT) {
             ants.push({
                 x: canvas.width / 2,
                 y: canvas.height / 2,
                 speedX: (Math.random() - 0.5) * 6,
-                speedY: (Math.random() - 0.5) * 6
+                speedY: (Math.random() - 0.5) * 6,
+                hasFood: false 
             });
         }
     } else if (ants.length > ANTS_COUNT) {
-        // Если нужно меньше — просто отрезаем лишних с конца массива
         ants.length = ANTS_COUNT;
     }
 });
@@ -109,12 +109,19 @@ slider.addEventListener('input', (e) => {
 
 // --- ФУНКЦИИ ОТРИСОВКИ ---
 
-// === [ШАГ 9 (ЭРКИН)]: ОБНОВЛЕННАЯ ФУНКЦИЯ ОТРИСОВКИ ===
+// === [ШАГ 13 (ЭРКИН)]: ИЗМЕНЕНИЕ ЦВЕТА ОТ СТАТУСА ===
 function drawAnts(antsArray) {
-    ctx.fillStyle = '#ffffff'; 
     for (let i = 0; i < antsArray.length; i++) {
         let ant = antsArray[i];
-        ctx.beginPath();           
+        ctx.beginPath(); 
+        
+        // Проверяем: если дошел до еды — красим в красный, если нет — в белый
+        if (ant.hasFood) {
+            ctx.fillStyle = '#ef4444'; // Красный
+        } else {
+            ctx.fillStyle = '#ffffff'; // Белый
+        }
+        
         ctx.arc(ant.x, ant.y, ANT_RADIUS, 0, Math.PI * 2); 
         ctx.fill();                
     }
@@ -147,8 +154,10 @@ function animationLoop() {
 
     let foodX = canvas.width - 100;
     let foodY = canvas.height - 100;
+    let foodRadius = 40;
+
     drawHome(homeX, homeY, 40);
-    drawFood(foodX, foodY, 40);
+    drawFood(foodX, foodY, foodRadius);
 
     // Логика движения Руслана
     if (isSimulationRunning) {
@@ -164,6 +173,17 @@ function animationLoop() {
 
             if (ant.y + ANT_RADIUS > canvas.height || ant.y - ANT_RADIUS < 0) {
                 ant.speedY = -ant.speedY;
+            }
+
+            // === [ШАГ 13 (ЭРКИН)]: ПРОВЕРКА НА СТОЛКНОВЕНИЕ С ЕДОЙ ===
+            // Считаем расстояние от муравья до центра зеленого круга еды
+            let dx = ant.x - foodX;
+            let dy = ant.y - foodY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Если муравей пересёк границу еды, он берет её и становится красным
+            if (distance < foodRadius + ANT_RADIUS) {
+                ant.hasFood = true;
             }
         }
     }
