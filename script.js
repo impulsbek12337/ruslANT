@@ -15,6 +15,9 @@ let homeX = 100;
 let homeY = 100;
 let homeRadius = 40; 
 
+// === [ШАГ 17 (ЭРКИН)]: ПЕРЕМЕННАЯ СКОРОСТИ ИСПАРЕНИЯ ===
+let evaporationSpeed = 0.005; 
+
 // === [ШАГ 15 (ЭРКИН)]: КАРТА ФЕРОМОНОВ (ВИЗУАЛЬНАЯ СЕТКА) ===
 const PHEROMONE_SIZE = 20; // Размер одного квадратика сетки
 let pheromoneGrid = [];    // Двумерный массив для интенсивности запаха
@@ -37,7 +40,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 initPheromones();
 
-// === [ШАГ 7 + ШАГ 11 (ЭРКИН)]: ПАНЕЛЬ УПРАВЛЕНИЯ СО СЛАЙДЕРОМ ===
+// === [ШАГ 7 + ШАГ 11 + ШАГ 17 (ЭРКИН)]: ПАНЕЛЬ УПРАВЛЕНИЯ С ДВУМЯ СЛАЙДЕРАМИ ===
 const panel = document.createElement('div');
 panel.style.position = 'absolute';
 panel.style.top = '20px';                 
@@ -62,6 +65,13 @@ panel.innerHTML = `
         <label for="antSlider" style="color: white; font-size: 11px; font-family: sans-serif;">Муравьи: <span id="antCountLabel" style="font-weight: bold; color: #3b82f6;">67</span></label>
         <input id="antSlider" type="range" min="1" max="300" value="67" style="cursor: pointer; width: 120px;">
     </div>
+
+    <div style="width: 1px; height: 25px; background: #4b5563;"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+        <label for="evaporationSlider" style="color: white; font-size: 11px; font-family: sans-serif;">Испарение: <span id="evaporationLabel" style="font-weight: bold; color: #10b981;">0.005</span></label>
+        <input id="evaporationSlider" type="range" min="0.001" max="0.05" step="0.001" value="0.005" style="cursor: pointer; width: 120px;">
+    </div>
 `;
 document.body.appendChild(panel);
 
@@ -76,7 +86,7 @@ function initAnts() {
             speedX: (Math.random() - 0.5) * 6,         
             speedY: (Math.random() - 0.5) * 6,
             hasFood: false,
-            pheromoneTimer: 0 // === [ШАГ 16 (РУСЛАН)]: Счетчик времени для цифрового следа ===
+            pheromoneTimer: 0 
         });
     }
 }
@@ -92,7 +102,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     initPheromones(); 
 });
 
-// Слайдер
+// Слайдер муравьев
 const slider = document.getElementById('antSlider');
 const label = document.getElementById('antCountLabel');
 slider.addEventListener('input', (e) => {
@@ -105,12 +115,21 @@ slider.addEventListener('input', (e) => {
                 x: canvas.width / 2, y: canvas.height / 2,
                 speedX: (Math.random() - 0.5) * 6, speedY: (Math.random() - 0.5) * 6,
                 hasFood: false,
-                pheromoneTimer: 0 // === [ШАГ 16 (РУСЛАН)]: Счетчик времени для новых муравьев ===
+                pheromoneTimer: 0 
             });
         }
     } else if (ants.length > ANTS_COUNT) {
         ants.length = ANTS_COUNT;
     }
+});
+
+// === [ШАГ 17 (ЭРКИН)]: СЛУШАТЕЛЬ ДЛЯ СЛАЙДЕРА ИСПАРЕНИЯ ===
+const evapSlider = document.getElementById('evaporationSlider');
+const evapLabel = document.getElementById('evaporationLabel');
+evapSlider.addEventListener('input', (e) => {
+    const newValue = parseFloat(e.target.value);
+    evapLabel.innerText = newValue;
+    evaporationSpeed = newValue; // Обновляем скорость испарения на лету
 });
 
 // --- ФУНКЦИИ ОТРИСОВКИ ---
@@ -119,12 +138,10 @@ slider.addEventListener('input', (e) => {
 function drawPheromones() {
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
-            // Тонкая сеточка на фоне, чтобы препод видел структуру карты
             ctx.strokeStyle = 'rgba(59, 130, 246, 0.03)'; 
             ctx.lineWidth = 1;
             ctx.strokeRect(x * PHEROMONE_SIZE, y * PHEROMONE_SIZE, PHEROMONE_SIZE, PHEROMONE_SIZE);
 
-            // Если в ячейке появится запах — рисуем полупрозрачный синий квадрат
             if (pheromoneGrid[x] && pheromoneGrid[x][y] > 0) {
                 let intensity = pheromoneGrid[x][y];
                 ctx.fillStyle = `rgba(59, 130, 246, ${intensity * 0.4})`; 
@@ -168,11 +185,11 @@ function animationLoop() {
     drawFood(foodX, foodY, foodRadius);
 
     if (isSimulationRunning) {
-        // === [ШАГ 15 (ЭРКИН)]: ПЛАВНОЕ ИСПАРЕНИЕ ЯЧЕЕК ===
+        // === [ШАГ 15 + ШАГ 17 (ЭРКИН)]: ИСПАРЕНИЕ С ИСПОЛЬЗОВАНИЕМ ДИНАМИЧЕСКОЙ СКОРОСТИ ===
         for (let x = 0; x < cols; x++) {
             for (let y = 0; y < rows; y++) {
                 if (pheromoneGrid[x] && pheromoneGrid[x][y] > 0) {
-                    pheromoneGrid[x][y] -= 0.005; // Каждым кадром уменьшаем интенсивность
+                    pheromoneGrid[x][y] -= evaporationSpeed; // Вычитаем значение из ползунка
                     if (pheromoneGrid[x][y] < 0) {
                         pheromoneGrid[x][y] = 0; 
                     }
@@ -202,15 +219,14 @@ function animationLoop() {
             if (ant.hasFood) {
                 ant.pheromoneTimer++;
 
-                // 60 кадров = ровно 1 секунда реального времени
                 if (ant.pheromoneTimer >= 60) {
                     let cellX = Math.floor(ant.x / PHEROMONE_SIZE);
                     let cellY = Math.floor(ant.y / PHEROMONE_SIZE);
 
                     if (cellX >= 0 && cellX < cols && cellY >= 0 && cellY < rows) {
-                        pheromoneGrid[cellX][cellY] = 1.0; // Оставляем цифровой след высокой интенсивности
+                        pheromoneGrid[cellX][cellY] = 1.0; 
                     }
-                    ant.pheromoneTimer = 0; // Сбрасываем таймер
+                    ant.pheromoneTimer = 0; 
                 }
             } else {
                 ant.pheromoneTimer = 0;
