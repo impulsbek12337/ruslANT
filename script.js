@@ -75,7 +75,8 @@ function initAnts() {
             y: canvas.height / 2,
             speedX: (Math.random() - 0.5) * 6,         
             speedY: (Math.random() - 0.5) * 6,
-            hasFood: false 
+            hasFood: false,
+            pheromoneTimer: 0 // === [ШАГ 16 (РУСЛАН)]: Счетчик времени для цифрового следа ===
         });
     }
 }
@@ -103,7 +104,8 @@ slider.addEventListener('input', (e) => {
             ants.push({
                 x: canvas.width / 2, y: canvas.height / 2,
                 speedX: (Math.random() - 0.5) * 6, speedY: (Math.random() - 0.5) * 6,
-                hasFood: false 
+                hasFood: false,
+                pheromoneTimer: 0 // === [ШАГ 16 (РУСЛАН)]: Счетчик времени для новых муравьев ===
             });
         }
     } else if (ants.length > ANTS_COUNT) {
@@ -194,6 +196,24 @@ function animationLoop() {
             let dxHome = ant.x - homeX; let dyHome = ant.y - homeY;
             if (ant.hasFood && Math.sqrt(dxHome * dxHome + dyHome * dyHome) < homeRadius + ANT_RADIUS) {
                 ant.hasFood = false;
+            }
+
+            // === [ШАГ 16 (РУСЛАН)]: ЛОГИКА СЛЕДА КАЖДУЮ СЕКУНДУ ===
+            if (ant.hasFood) {
+                ant.pheromoneTimer++;
+
+                // 60 кадров = ровно 1 секунда реального времени
+                if (ant.pheromoneTimer >= 60) {
+                    let cellX = Math.floor(ant.x / PHEROMONE_SIZE);
+                    let cellY = Math.floor(ant.y / PHEROMONE_SIZE);
+
+                    if (cellX >= 0 && cellX < cols && cellY >= 0 && cellY < rows) {
+                        pheromoneGrid[cellX][cellY] = 1.0; // Оставляем цифровой след высокой интенсивности
+                    }
+                    ant.pheromoneTimer = 0; // Сбрасываем таймер
+                }
+            } else {
+                ant.pheromoneTimer = 0;
             }
         }
     }
