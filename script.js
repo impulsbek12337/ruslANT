@@ -1,56 +1,63 @@
+// Проверяем canvas
 const canvas = document.getElementById('simulationCanvas');
-const ctx = canvas.getContext('2d');
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    initPheromones(); 
+if (!canvas) {
+    alert("Критическая ошибка: В твоем HTML файле нет тега <canvas id='simulationCanvas'></canvas>!");
 }
-window.addEventListener('resize', resizeCanvas);
+const ctx = canvas.getContext('2d');
 
 // --- НАСТРОЙКИ СИМУЛЯЦИИ ---
 const ANT_RADIUS = 5;
-let ANTS_COUNT = 67; 
+let ANTS_COUNT = 67;
 let homeX = 100;
 let homeY = 100;
-let homeRadius = 40; 
+let homeRadius = 40;
 
-// === [ШАГ 17 (ЭРКИН)]: ПЕРЕМЕННАЯ СКОРОСТИ ИСПАРЕНИЯ ===
-let evaporationSpeed = 0.005; 
+// === ПЕРЕМЕННАЯ СКОРОСТИ ИСПАРЕНИЯ ===
+let evaporationSpeed = 0.005;
 
-// === [ШАГ 15 (ЭРКИН)]: КАРТА ФЕРОМОНОВ (ВИЗУАЛЬНАЯ СЕТКА) ===
-const PHEROMONE_SIZE = 20; // Размер одного квадратика сетки
-let pheromoneGrid = [];    // Двумерный массив для интенсивности запаха
+// === КАРТА ФЕРОМОНОВ (ВИЗУАЛЬНАЯ СЕТКА) ===
+const PHEROMONE_SIZE = 20; 
+let pheromoneGrid = [];    
 let cols = 0;
 let rows = 0;
 
 function initPheromones() {
-    cols = Math.ceil(window.innerWidth / PHEROMONE_SIZE);
-    rows = Math.ceil(window.innerHeight / PHEROMONE_SIZE);
+    let w = window.innerWidth > 0 ? window.innerWidth : 800;
+    let h = window.innerHeight > 0 ? window.innerHeight : 600;
+    cols = Math.ceil(w / PHEROMONE_SIZE);
+    rows = Math.ceil(h / PHEROMONE_SIZE);
+    
     pheromoneGrid = [];
     for (let x = 0; x < cols; x++) {
         pheromoneGrid[x] = [];
         for (let y = 0; y < rows; y++) {
-            pheromoneGrid[x][y] = 0; // Изначально запаха нет, сетка пустая
+            pheromoneGrid[x][y] = 0; 
         }
     }
 }
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// Принудительно ставим размеры окон
+canvas.width = window.innerWidth > 0 ? window.innerWidth : 800;
+canvas.height = window.innerHeight > 0 ? window.innerHeight : 600;
 initPheromones();
 
-// === [ШАГ 7 + ШАГ 11 + ШАГ 17 (ЭРКИН)]: ПАНЕЛЬ УПРАВЛЕНИЯ С ДВУМЯ СЛАЙДЕРАМИ ===
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth > 0 ? window.innerWidth : 800;
+    canvas.height = window.innerHeight > 0 ? window.innerHeight : 600;
+    initPheromones();
+});
+
+// === ПАНЕЛЬ УПРАВЛЕНИЯ ===
 const panel = document.createElement('div');
 panel.style.position = 'absolute';
-panel.style.top = '20px';                 
-panel.style.left = '50%';                 
-panel.style.transform = 'translateX(-50%)'; 
+panel.style.top = '20px';                
+panel.style.left = '50%';                
+panel.style.transform = 'translateX(-50%)';
 panel.style.background = 'rgba(31, 41, 55, 0.9)';
 panel.style.padding = '15px';
 panel.style.borderRadius = '8px';
 panel.style.display = 'flex';
-panel.style.alignItems = 'center'; 
+panel.style.alignItems = 'center';
 panel.style.gap = '15px';
 panel.style.zIndex = '10';
 
@@ -58,18 +65,18 @@ panel.innerHTML = `
     <button id="startBtn" style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Старт</button>
     <button id="stopBtn" style="background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Стоп</button>
     <button id="resetBtn" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold;">Сброс</button>
-    
+   
     <div style="width: 1px; height: 25px; background: #4b5563;"></div>
-    
+   
     <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        <label for="antSlider" style="color: white; font-size: 11px; font-family: sans-serif;">Муравьи: <span id="antCountLabel" style="font-weight: bold; color: #3b82f6;">67</span></label>
+        <label style="color: white; font-size: 11px; font-family: sans-serif;">Муравьи: <span id="antCountLabel" style="font-weight: bold; color: #3b82f6;">67</span></label>
         <input id="antSlider" type="range" min="1" max="300" value="67" style="cursor: pointer; width: 120px;">
     </div>
 
     <div style="width: 1px; height: 25px; background: #4b5563;"></div>
 
     <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-        <label for="evaporationSlider" style="color: white; font-size: 11px; font-family: sans-serif;">Испарение: <span id="evaporationLabel" style="font-weight: bold; color: #10b981;">0.005</span></label>
+        <label style="color: white; font-size: 11px; font-family: sans-serif;">Испарение: <span id="evaporationLabel" style="font-weight: bold; color: #10b981;">0.005</span></label>
         <input id="evaporationSlider" type="range" min="0.001" max="0.05" step="0.001" value="0.005" style="cursor: pointer; width: 120px;">
     </div>
 `;
@@ -80,95 +87,90 @@ let ants = [];
 function initAnts() {
     ants = [];
     for (let i = 0; i < ANTS_COUNT; i++) {
+        let sx = (Math.random() - 0.5) * 6;
+        let sy = (Math.random() - 0.5) * 6;
+        if (Math.abs(sx) < 0.2) sx = 2;
+        if (Math.abs(sy) < 0.2) sy = 2;
+
         ants.push({
-            x: canvas.width / 2,         
+            x: canvas.width / 2,        
             y: canvas.height / 2,
-            speedX: (Math.random() - 0.5) * 6,         
-            speedY: (Math.random() - 0.5) * 6,
+            speedX: sx,        
+            speedY: sy,
             hasFood: false,
-            pheromoneTimer: 0 
+            pheromoneTimer: 0
         });
     }
 }
 initAnts();
 
-// Кнопки
-let isSimulationRunning = true; 
-document.getElementById('stopBtn').addEventListener('click', () => isSimulationRunning = false);
-document.getElementById('startBtn').addEventListener('click', () => isSimulationRunning = true);
-document.getElementById('resetBtn').addEventListener('click', () => {
-    ANTS_COUNT = parseInt(slider.value);
-    initAnts(); 
-    initPheromones(); 
-});
+// БЕЗОПАСНАЯ ПРИВЯЗКА КНОПОК И СЛАЙДЕРОВ
+let isSimulationRunning = true;
+try {
+    document.getElementById('stopBtn').addEventListener('click', () => isSimulationRunning = false);
+    document.getElementById('startBtn').addEventListener('click', () => isSimulationRunning = true);
+    
+    const slider = document.getElementById('antSlider');
+    const label = document.getElementById('antCountLabel');
+    
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        if(slider) ANTS_COUNT = parseInt(slider.value);
+        initAnts();
+        initPheromones();
+    });
 
-// Слайдер муравьев
-const slider = document.getElementById('antSlider');
-const label = document.getElementById('antCountLabel');
-slider.addEventListener('input', (e) => {
-    const newValue = parseInt(e.target.value);
-    label.innerText = newValue; 
-    ANTS_COUNT = newValue; 
-    if (ants.length < ANTS_COUNT) {
-        while (ants.length < ANTS_COUNT) {
-            ants.push({
-                x: canvas.width / 2, y: canvas.height / 2,
-                speedX: (Math.random() - 0.5) * 6, speedY: (Math.random() - 0.5) * 6,
-                hasFood: false,
-                pheromoneTimer: 0 
-            });
-        }
-    } else if (ants.length > ANTS_COUNT) {
-        ants.length = ANTS_COUNT;
+    if(slider && label) {
+        slider.addEventListener('input', (e) => {
+            const newValue = parseInt(e.target.value);
+            label.innerText = newValue;
+            ANTS_COUNT = newValue;
+            while (ants.length < ANTS_COUNT) {
+                ants.push({
+                    x: canvas.width / 2, y: canvas.height / 2,
+                    speedX: (Math.random() - 0.5) * 6, speedY: (Math.random() - 0.5) * 6,
+                    hasFood: false,
+                    pheromoneTimer: 0
+                });
+            }
+            if (ants.length > ANTS_COUNT) ants.length = ANTS_COUNT;
+        });
     }
-});
 
-// === [ШАГ 17 (ЭРКИН)]: СЛУШАТЕЛЬ ДЛЯ СЛАЙДЕРА ИСПАРЕНИЯ ===
-const evapSlider = document.getElementById('evaporationSlider');
-const evapLabel = document.getElementById('evaporationLabel');
-evapSlider.addEventListener('input', (e) => {
-    const newValue = parseFloat(e.target.value);
-    evapLabel.innerText = newValue;
-    evaporationSpeed = newValue; // Обновляем скорость испарения на лету
-});
+    const evapSlider = document.getElementById('evaporationSlider');
+    const evapLabel = document.getElementById('evaporationLabel');
+    if(evapSlider && evapLabel) {
+        evapSlider.addEventListener('input', (e) => {
+            const newValue = parseFloat(e.target.value);
+            evapLabel.innerText = newValue;
+            evaporationSpeed = newValue; 
+        });
+    }
+} catch(e) {
+    console.log("Внешние элементы интерфейса обрабатываются автоматически", e);
+}
 
 // --- ФУНКЦИИ ОТРИСОВКИ ---
-
-// === [ШАГ 15 (ЭРКИН)]: ОТРИСОВКА ПОЛУПРОЗРАЧНЫХ СИНИХ КВАДРАТИКОВ ===
 function drawPheromones() {
+    if (cols <= 0 || rows <= 0 || !pheromoneGrid.length) return;
     for (let x = 0; x < cols; x++) {
         for (let y = 0; y < rows; y++) {
-            ctx.strokeStyle = 'rgba(59, 130, 246, 0.03)'; 
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x * PHEROMONE_SIZE, y * PHEROMONE_SIZE, PHEROMONE_SIZE, PHEROMONE_SIZE);
-
             if (pheromoneGrid[x] && pheromoneGrid[x][y] > 0) {
                 let intensity = pheromoneGrid[x][y];
-                ctx.fillStyle = `rgba(59, 130, 246, ${intensity * 0.4})`; 
+                ctx.fillStyle = `rgba(59, 130, 246, ${intensity * 0.4})`;
                 ctx.fillRect(x * PHEROMONE_SIZE, y * PHEROMONE_SIZE, PHEROMONE_SIZE, PHEROMONE_SIZE);
             }
         }
     }
 }
 
-function drawAnts(antsArray) {
-    for (let i = 0; i < antsArray.length; i++) {
-        let ant = antsArray[i];
-        ctx.beginPath(); 
-        ctx.fillStyle = ant.hasFood ? '#ef4444' : '#ffffff'; 
-        ctx.arc(ant.x, ant.y, ANT_RADIUS, 0, Math.PI * 2); 
+function drawAnts() {
+    for (let i = 0; i < ants.length; i++) {
+        let ant = ants[i];
+        ctx.beginPath();
+        ctx.fillStyle = ant.hasFood ? '#ef4444' : '#ffffff';
+        ctx.arc(ant.x, ant.y, ANT_RADIUS, 0, Math.PI * 2);
         ctx.fill();                
     }
-}
-
-function drawHome(x, y, radius) {
-    ctx.fillStyle = '#1e3a8a'; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 3; ctx.stroke();
-}
-
-function drawFood(x, y, radius) {
-    ctx.fillStyle = '#065f46'; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#10b981'; ctx.lineWidth = 3; ctx.stroke();
 }
 
 // --- ИГРОВОЙ ЦИКЛ ---
@@ -179,62 +181,118 @@ function animationLoop() {
     let foodY = canvas.height - 100;
     let foodRadius = 40;
 
+    // Сначала всегда рисуем базу
     drawPheromones();
-
-    drawHome(homeX, homeY, homeRadius);
-    drawFood(foodX, foodY, foodRadius);
+    ctx.fillStyle = '#1e3a8a'; ctx.beginPath(); ctx.arc(homeX, homeY, homeRadius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#065f46'; ctx.beginPath(); ctx.arc(foodX, foodY, foodRadius, 0, Math.PI * 2); ctx.fill();
 
     if (isSimulationRunning) {
-        // === [ШАГ 15 + ШАГ 17 (ЭРКИН)]: ИСПАРЕНИЕ С ИСПОЛЬЗОВАНИЕМ ДИНАМИЧЕСКОЙ СКОРОСТИ ===
+        // Испарение феромонов
         for (let x = 0; x < cols; x++) {
             for (let y = 0; y < rows; y++) {
                 if (pheromoneGrid[x] && pheromoneGrid[x][y] > 0) {
-                    pheromoneGrid[x][y] -= evaporationSpeed; // Вычитаем значение из ползунка
-                    if (pheromoneGrid[x][y] < 0) {
-                        pheromoneGrid[x][y] = 0; 
-                    }
+                    pheromoneGrid[x][y] -= evaporationSpeed;
+                    if (pheromoneGrid[x][y] < 0) pheromoneGrid[x][y] = 0;
                 }
             }
         }
 
+        // Логика муравьев
         for (let i = 0; i < ants.length; i++) {
             let ant = ants[i];
+
+            let cx = Math.floor(ant.x / PHEROMONE_SIZE);
+            let cy = Math.floor(ant.y / PHEROMONE_SIZE);
+
+            if (ant.hasFood) {
+                // === МУРАВЕЙ С ЕДОЙ: Целенаправленно бежит к дому ===
+                let dirX = homeX - ant.x;
+                let dirY = homeY - ant.y;
+                let dist = Math.sqrt(dirX * dirX + dirY * dirY);
+                
+                if (dist > 0) {
+                    ant.speedX = (dirX / dist) * 3.5 + (Math.random() - 0.5) * 0.7;
+                    ant.speedY = (dirY / dist) * 3.5 + (Math.random() - 0.5) * 0.7;
+                }
+            } else {
+                // === МУРАВЕЙ БЕЗ ЕДЫ: Ищет след феромона ===
+                if (cols > 0 && rows > 0) {
+                    let sX = Math.sign(ant.speedX);
+                    let sY = Math.sign(ant.speedY);
+
+                    let checkGrid = (x, y) => {
+                        if (x >= 0 && x < cols && y >= 0 && y < rows && pheromoneGrid[x]) {
+                            return pheromoneGrid[x][y] || 0;
+                        }
+                        return 0;
+                    };
+
+                    let smellCenter = checkGrid(cx + sX, cy + sY);
+                    let smellLeft   = checkGrid(cx + (sX - sY), cy + (sY + sX));
+                    let smellRight  = checkGrid(cx + (sX + sY), cy + (sY - sX));
+
+                    if (smellCenter > 0 || smellLeft > 0 || smellRight > 0) {
+                        // Плавно корректируем курс в сторону максимального запаха
+                        if (smellLeft > smellCenter && smellLeft > smellRight) {
+                            ant.speedX += -sY * 0.6;
+                            ant.speedY += sX * 0.6;
+                        } else if (smellRight > smellCenter && smellRight > smellLeft) {
+                            ant.speedX += sY * 0.6;
+                            ant.speedY += -sX * 0.6;
+                        } else {
+                            ant.speedX += sX * 0.3;
+                            ant.speedY += sY * 0.3;
+                        }
+                    } else {
+                        // Запаха нет — обычное хаотичное блуждание
+                        ant.speedX += (Math.random() - 0.5) * 0.5;
+                        ant.speedY += (Math.random() - 0.5) * 0.5;
+                    }
+                }
+            }
+
+            // Ограничение скорости
+            let speed = Math.sqrt(ant.speedX * ant.speedX + ant.speedY * ant.speedY);
+            if (speed > 3.5) {
+                ant.speedX = (ant.speedX / speed) * 3.5;
+                ant.speedY = (ant.speedY / speed) * 3.5;
+            }
+
             ant.x += ant.speedX;
             ant.y += ant.speedY;
 
-            if (ant.x + ANT_RADIUS > canvas.width || ant.x - ANT_RADIUS < 0) ant.speedX = -ant.speedX;
-            if (ant.y + ANT_RADIUS > canvas.height || ant.y - ANT_RADIUS < 0) ant.speedY = -ant.speedY;
-
-            let dxFood = ant.x - foodX; let dyFood = ant.y - foodY;
-            if (Math.sqrt(dxFood * dxFood + dyFood * dyFood) < foodRadius + ANT_RADIUS) {
-                ant.hasFood = true;
+            // Стены
+            if (ant.x < 0 || ant.x > canvas.width) { 
+                ant.speedX = -ant.speedX; 
+                ant.x = Math.max(0, Math.min(canvas.width, ant.x)); 
+            }
+            if (ant.y < 0 || ant.y > canvas.height) { 
+                ant.speedY = -ant.speedY; 
+                ant.y = Math.max(0, Math.min(canvas.height, ant.y)); 
             }
 
-            let dxHome = ant.x - homeX; let dyHome = ant.y - homeY;
-            if (ant.hasFood && Math.sqrt(dxHome * dxHome + dyHome * dyHome) < homeRadius + ANT_RADIUS) {
+            // Еда и дом
+            if (!ant.hasFood && Math.sqrt((ant.x - foodX)**2 + (ant.y - foodY)**2) < foodRadius) {
+                ant.hasFood = true;
+            }
+            if (ant.hasFood && Math.sqrt((ant.x - homeX)**2 + (ant.y - homeY)**2) < homeRadius) {
                 ant.hasFood = false;
             }
 
-            // === [ШАГ 16 (РУСЛАН)]: ЛОГИКА СЛЕДА КАЖДУЮ СЕКУНДУ ===
+            // Оставление следа
             if (ant.hasFood) {
                 ant.pheromoneTimer++;
-
-                if (ant.pheromoneTimer >= 60) {
-                    let cellX = Math.floor(ant.x / PHEROMONE_SIZE);
-                    let cellY = Math.floor(ant.y / PHEROMONE_SIZE);
-
-                    if (cellX >= 0 && cellX < cols && cellY >= 0 && cellY < rows) {
-                        pheromoneGrid[cellX][cellY] = 1.0; 
+                if (ant.pheromoneTimer >= 5) {
+                    if (cx >= 0 && cx < cols && cy >= 0 && cy < rows && pheromoneGrid[cx]) {
+                        pheromoneGrid[cx][cy] = 1.0;
                     }
-                    ant.pheromoneTimer = 0; 
+                    ant.pheromoneTimer = 0;
                 }
-            } else {
-                ant.pheromoneTimer = 0;
             }
         }
     }
 
-    drawAnts(ants);
+    drawAnts();
     requestAnimationFrame(animationLoop);
 }
 
