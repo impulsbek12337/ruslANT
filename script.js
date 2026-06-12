@@ -45,7 +45,45 @@ window.addEventListener('resize', () => {
     canvas.width = window.innerWidth > 0 ? window.innerWidth : 800;
     canvas.height = window.innerHeight > 0 ? window.innerHeight : 600;
     initPheromones();
+    generateDirtTexture(); // Перегенерируем текстуру под новый размер
 });
+
+// === ГЕНЕРАЦИЯ ТЕКСТУРЫ ЗЕМЛИ (чтобы не лагало в цикле) ===
+let dirtCanvas = document.createElement('canvas');
+let dirtCtx = dirtCanvas.getContext('2d');
+
+function generateDirtTexture() {
+    dirtCanvas.width = canvas.width;
+    dirtCanvas.height = canvas.height;
+    
+    // Основной цвет земли
+    dirtCtx.fillStyle = '#4a3525';
+    dirtCtx.fillRect(0, 0, dirtCanvas.width, dirtCanvas.height);
+    
+    // Рисуем песчинки и текстуру почты
+    for (let i = 0; i < (dirtCanvas.width * dirtCanvas.height) / 100; i++) {
+        let x = Math.random() * dirtCanvas.width;
+        let y = Math.random() * dirtCanvas.height;
+        let size = Math.random() * 2 + 1;
+        
+        // Разные оттенки земли/песка
+        let colors = ['#3d2b1f', '#5c4331', '#2e1f16', '#6e503b'];
+        dirtCtx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+        dirtCtx.fillRect(x, y, size, size);
+    }
+    
+    // Мелкие камушки
+    for (let i = 0; i < 30; i++) {
+        let x = Math.random() * dirtCanvas.width;
+        let y = Math.random() * dirtCanvas.height;
+        let r = Math.random() * 4 + 2;
+        dirtCtx.beginPath();
+        dirtCtx.fillStyle = '#7a6b58';
+        dirtCtx.arc(x, y, r, 0, Math.PI * 2);
+        dirtCtx.fill();
+    }
+}
+generateDirtTexture();
 
 // === ПАНЕЛЬ УПРАВЛЕНИЯ ===
 const panel = document.createElement('div');
@@ -156,7 +194,8 @@ function drawPheromones() {
         for (let y = 0; y < rows; y++) {
             if (pheromoneGrid[x] && pheromoneGrid[x][y] > 0) {
                 let intensity = pheromoneGrid[x][y];
-                ctx.fillStyle = `rgba(59, 130, 246, ${intensity * 0.4})`;
+                // Сделали след чуть более мягким и неоновым (бирюзово-синим)
+                ctx.fillStyle = `rgba(56, 189, 248, ${intensity * 0.35})`;
                 ctx.fillRect(x * PHEROMONE_SIZE, y * PHEROMONE_SIZE, PHEROMONE_SIZE, PHEROMONE_SIZE);
             }
         }
@@ -166,25 +205,84 @@ function drawPheromones() {
 function drawAnts() {
     for (let i = 0; i < ants.length; i++) {
         let ant = ants[i];
-        ctx.beginPath();
-        ctx.fillStyle = ant.hasFood ? '#ef4444' : '#ffffff';
-        ctx.arc(ant.x, ant.y, ANT_RADIUS, 0, Math.PI * 2);
-        ctx.fill();                
+        
+        // Считаем угол поворота муравья по вектору его скорости
+        let angle = Math.atan2(ant.speedY, ant.speedX);
+        
+        ctx.save();
+        ctx.translate(ant.x, ant.y);
+        ctx.rotate(angle);
+        
+        // Анимация движения лапок (зависит от координат, чтобы у каждого была своя фаза)
+        let legWiggle = Math.sin((ant.x + ant.y) * 0.5) * 0.3;
+        
+        // Рисуем лапки (3 пары)
+        ctx.strokeStyle = ant.hasFood ? '#4a2310' : '#111111';
+        ctx.lineWidth = 1.2;
+        
+        for (let side of [-1, 1]) {
+            // Передние
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(3, side * 5 + legWiggle); ctx.stroke();
+            // Средние
+            ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-2, side * 5 - legWiggle); ctx.stroke();
+            // Задние
+            ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-6, side * 6 + legWiggle); ctx.stroke();
+        }
+        
+        // Цвет тела: обычный — черный/темно-серый, с едой — слегка красноватый лесной муравей
+        ctx.fillStyle = ant.hasFood ? '#8b261b' : '#1a1a1a';
+        
+        // Брюшко (задняя часть)
+        ctx.beginPath(); ctx.arc(-4, 0, 2.5, 0, Math.PI * 2); ctx.fill();
+        // Грудь (средняя часть)
+        ctx.beginPath(); ctx.arc(-1, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+        // Голова
+        ctx.beginPath(); ctx.arc(2, 0, 1.8, 0, Math.PI * 2); ctx.fill();
+        
+        // Усики
+        ctx.strokeStyle = ant.hasFood ? '#8b261b' : '#1a1a1a';
+        ctx.beginPath(); ctx.moveTo(3, -0.5); ctx.lineTo(5, -2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(3, 0.5); ctx.lineTo(5, 2); ctx.stroke();
+        
+        // Если муравей тащит еду — рисуем листочек перед ним
+        if (ant.hasFood) {
+            ctx.fillStyle = '#22c55e'; // Зеленый кусочек
+            ctx.beginPath();
+            ctx.arc(5, 0, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        ctx.restore();
     }
 }
 
 // --- ИГРОВОЙ ЦИКЛ ---
 function animationLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Вместо clearRect накладываем заготовленный холст с текстурой земли
+    ctx.drawImage(dirtCanvas, 0, 0);
 
     let foodX = canvas.width - 100;
     let foodY = canvas.height - 100;
     let foodRadius = 40;
 
-    // Сначала всегда рисуем базу
     drawPheromones();
-    ctx.fillStyle = '#1e3a8a'; ctx.beginPath(); ctx.arc(homeX, homeY, homeRadius, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#065f46'; ctx.beginPath(); ctx.arc(foodX, foodY, foodRadius, 0, Math.PI * 2); ctx.fill();
+    
+    // --- ОТРИСОВКА ДОМА (НОРКА В ЗЕМЛЕ) ---
+    // Внешнее кольцо (насыпь)
+    ctx.fillStyle = '#3a281c'; ctx.beginPath(); ctx.arc(homeX, homeY, homeRadius, 0, Math.PI * 2); ctx.fill();
+    // Темный вход в нору с градиентом глубины
+    let homeGrad = ctx.createRadialGradient(homeX, homeY, 5, homeX, homeY, homeRadius - 10);
+    homeGrad.addColorStop(0, '#0a0503');
+    homeGrad.addColorStop(1, '#2b1d14');
+    ctx.fillStyle = homeGrad; ctx.beginPath(); ctx.arc(homeX, homeY, homeRadius - 10, 0, Math.PI * 2); ctx.fill();
+
+    // --- ОТРИСОВКА ИСТОЧНИКА ЕДЫ (КУЧА ТРАВЫ/ЯГОД) ---
+    ctx.fillStyle = '#15803d'; ctx.beginPath(); ctx.arc(foodX, foodY, foodRadius, 0, Math.PI * 2); ctx.fill();
+    // Добавим текстурных вкраплений на источник еды
+    for(let r = 5; r < foodRadius; r += 10) {
+        ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(foodX + (Math.sin(r)*4), foodY + (Math.cos(r)*4), r, 0, Math.PI * 0.5); ctx.stroke();
+    }
 
     if (isSimulationRunning) {
         // Испарение феромонов
