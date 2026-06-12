@@ -13,6 +13,7 @@ const ANT_RADIUS = 5;
 let ANTS_COUNT = 67; // Теперь это let, так как число будет меняться слайдером
 let homeX = 100;
 let homeY = 100;
+let homeRadius = 40; // Вынесли радиус дома в переменную для удобства расчетов (Шаг 14)
 
 // === [ШАГ 7 + ШАГ 11 (ЭРКИН)]: ПАНЕЛЬ УПРАВЛЕНИЯ СО СЛАЙДЕРОМ ===
 const panel = document.createElement('div');
@@ -92,6 +93,7 @@ slider.addEventListener('input', (e) => {
 
     // Динамически меняем размер массива в памяти на лету (Шаг 12) (Шаг 13: Добавлен hasFood для новых муравьев)
     if (ants.length < ANTS_COUNT) {
+        / * Изменение в рамках Шага 12 * /
         while (ants.length < ANTS_COUNT) {
             ants.push({
                 x: canvas.width / 2,
@@ -156,7 +158,7 @@ function animationLoop() {
     let foodY = canvas.height - 100;
     let foodRadius = 40;
 
-    drawHome(homeX, homeY, 40);
+    drawHome(homeX, homeY, homeRadius);
     drawFood(foodX, foodY, foodRadius);
 
     // Логика движения Руслана
@@ -176,14 +178,24 @@ function animationLoop() {
             }
 
             // === [ШАГ 13 (ЭРКИН)]: ПРОВЕРКА НА СТОЛКНОВЕНИЕ С ЕДОЙ ===
-            // Считаем расстояние от муравья до центра зеленого круга еды
-            let dx = ant.x - foodX;
-            let dy = ant.y - foodY;
-            let distance = Math.sqrt(dx * dx + dy * dy);
+            let dxFood = ant.x - foodX;
+            let dyFood = ant.y - foodY;
+            let distanceToFood = Math.sqrt(dxFood * dxFood + dyFood * dyFood);
 
             // Если муравей пересёк границу еды, он берет её и становится красным
-            if (distance < foodRadius + ANT_RADIUS) {
+            if (distanceToFood < foodRadius + ANT_RADIUS) {
                 ant.hasFood = true;
+            }
+
+            // === [ШАГ 14 (РУСЛАН)]: ПРОВЕРКА НА СТОЛКНОВЕНИЕ С ДОМОМ ===
+            // Считаем расстояние от муравья до центра синего круга (дома)
+            let dxHome = ant.x - homeX;
+            let dyHome = ant.y - homeY;
+            let distanceToHome = Math.sqrt(dxHome * dxHome + dyHome * dyHome);
+
+            // Если красный муравей добежал до дома, он сбрасывает еду и снова белеет
+            if (ant.hasFood && distanceToHome < homeRadius + ANT_RADIUS) {
+                ant.hasFood = false;
             }
         }
     }
